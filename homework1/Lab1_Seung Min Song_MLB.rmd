@@ -1,0 +1,49 @@
+---
+title: "Lab 1 Seung Min Song"
+output:  
+  pdf_document: default
+  html_document:
+    includes:
+      in_header: header.html
+    css: ./lab.css
+    highlight: pygments
+    theme: cerulean
+    toc: true
+    toc_float: true
+    linkcolor: blue
+date: "2022-09-04"
+---
+
+```{r setup,include=FALSE}
+knitr::opts_chunk$set(echo=TRUE)
+library(data.table)
+```
+
+```{r}
+data <- fread( "https://raw.githubusercontent.com/seung-m1nsong/607/main/homework1/mlb_elo_latest.csv", 
+               select=c("date", "season", "team1",	"team2", "elo1_pre"))
+
+```
+
+```{r load-data-data}
+data
+```
+
+## Introduction
+
+The article [https://projects.fivethirtyeight.com/2019-mlb-predictions/](https://projects.fivethirtyeight.com/2019-mlb-predictions/) talks about how they use Elo, a simple way to rate competitors that can be tuned and customized endlessly to incorporate available data to evaluate MLB team ratings and predict each game and season. Also, team and player ratings are used to forecast how often each team makes the playoffs or wins the World Series.  The article also talked about how they calculate team ratings and what elements and components were used to calculate ratings.
+
+The article [https://projects.fivethirtyeight.com/complete-history-of-mlb/](https://projects.fivethirtyeight.com/complete-history-of-mlb/) is about Elo ratings and it is FiveThirtyEight's favorite method for comparing teams across different eras and is used to explore the history of the NBS, NFL, and MLB.
+
+The article mentioned the greatest team in history is the Atlanta Braves, and a very interesting team the Seatle Mariners in 2001, the worst team in the history of baseball was the Cleaveland Spiders, a very unfortunate season for the Montreal Expos due to the strike, and unstoppable the New York Yankees in early to mid 90th aka the Bronx bomber. 
+
+
+## Conclusion
+\
+\
+\
+\
+\
+
+GitHub: <https://github.com/seung-m1nsong/607>\
+rpub: <https://rpubs.com/seungm1nsong/937709>
