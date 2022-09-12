@@ -1,0 +1,105 @@
+---
+title: "Lab 2 Seung Min Song"
+output:  
+  pdf_document: default
+  html_document:
+  includes:
+  in_header: header.html
+css: ./lab.css
+highlight: pygments
+theme: cerulean
+toc: true
+toc_float: true
+linkcolor: blue
+date: "2022-09-11"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message=FALSE, echo=TRUE, warning= FALSE)
+```
+
+
+```{r install-packages, message=FALSE, eval=FALSE}
+install.packages('dplyr')
+library(tidyverse)
+library(RMySQL)
+library(DBI)
+library(dplyr)
+```
+## Survey software
+
+I used Google Forms to gather the movie reviewers' survey response. \
+
+## CSV
+
+Please visit <https://github.com/seung-m1nsong/607> homework2 to view my mysql query\
+
+View GitHub CSV file to RStudio
+```{r reviewdata-data}
+movie <- data.table::fread( "https://raw.githubusercontent.com/seung-m1nsong/607/main/homework2/Movie_Rating.csv", 
+               select=c("firstname","lastname","age", "sex", "location","SpiderMan","Thor","Top_Gun","Morbius","Toronto", "Doctor_Strange"))
+
+movie
+```
+
+
+## mysql
+
+Please visit <https://github.com/seung-m1nsong/607> homework2 to view my mysql query\
+
+Connect RStudio with my local mysql
+```{r dbconnect-data}
+con <- DBI::dbConnect(
+  RMySQL::MySQL(), 
+  user="root", 
+  password="",
+  host="localhost", 
+  dbname="moviedatabase"
+)
+```
+
+View movie list
+```{r movielist-data}
+ dfMovielist <- DBI::dbGetQuery(con, 
+"select * from movie")
+dfMovielist
+```
+
+
+View all movie reviewer
+```{r movierevier-data}
+ dfMovieReviewer <- DBI::dbGetQuery(con, 
+"select * from reviewer")
+dfMovieReviewer
+```
+
+Show movie title with rating from reviewers.\
+I joined two table: Table called 'move' and 'movierating'
+```{r moviereiviewrating-data}
+ dfMovieReviewAverage <- DBI::dbGetQuery(con, 
+"select movie.movietitle, avg(movierating.rating) as avg_rating, min(movierating.rating) as min_rating, max(movierating.rating) as max_rating
+from  movie
+inner join movierating
+ON movierating.movie = movie.movietitle
+group by movie.movietitle;")
+
+dfMovieReviewAverage
+```
+
+
+## About missing data
+
+I gathered my data from Google Forms. I made the entire field a required field to avoid any missing data. If it is really important data, it is important not to omit it in the first place. The best way to avoid any missing important data is to ensure reviewer to not to missing data insertion. I gave reviewers a clear instruction which movie to rate. This way I can avoid multiple selections.\
+
+Please visit the link below to check the Goole Forms:\
+[https://forms.gle/eRduhTBvFjz1khL26](https://forms.gle/eRduhTBvFjz1khL26)
+
+
+## Standarizing data
+
+Data standardization is an important due to the fact that it provides a structure for creating and maintaining data quality\
+
+For example, the analysis of vulnerable areas for Covid-19 is a standard analysis model developed by New York City. However, if New Jersey data is inputed according to the data format, it can be used in New Jersey. This model can be easily used to analyze areas where there is shortage of COVID-19 screening clinics.
+
+
+
