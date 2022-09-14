@@ -1,0 +1,198 @@
+---
+title: "Extra Credit Seung Min Song"
+output:  
+  pdf_document: default
+html_document:
+  includes:
+  in_header: header.html
+css: ./lab.css
+highlight: pygments
+theme: cerulean
+toc: true
+toc_float: true
+linkcolor: blue
+date: "2022-09-13"
+---
+Team member: Ted Kim\
+GitHub: <https://github.com/seung-m1nsong/607>
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r install-packages, echo=FALSE}
+
+arrPackages <- c('RMySQL', 'DBI', 'dplyr', 'tidyverse', 'ggplot2')
+installed_packages <- arrPackages %in% rownames(installed.packages())
+
+if (any(installed_packages == FALSE)) {
+  install.packages(arrPackages[!installed_packages], 
+                   repos = "http://cran.us.r-project.org")
+}
+invisible(lapply(arrPackages, library, character.only = TRUE))
+```
+
+Create a connection object to MySQL database.
+```{r dbconnect-data, echo=TRUE}
+con <- DBI::dbConnect(
+  RMySQL::MySQL(), 
+  user="root", 
+  password="",
+  host="localhost", 
+  dbname="stock"
+)
+```
+
+Create database *stock* if not exists, and use database *stock*
+```{r create-database, echo=TRUE}
+res <- dbSendQuery(con, 'create database if not exists stock;')
+res <- dbSendQuery(con, 'use stock;')
+```
+
+Insert data to sp table
+```{r get-data, results='asis', echo=TRUE}
+dfsp <- read.csv('https://raw.githubusercontent.com/seung-m1nsong/607/main/Extracredit/stockprice.csv')
+dbWriteTable(con, 'sp', dfsp, row.names=FALSE, overwrite=TRUE)
+```
+
+Change data type using R
+```{r dboverwrite-data}
+dbWriteTable(con, 'sp', dfsp, field.types=c(tradingdate='date', closeprice='double(8,2)', volume='bigint', open='double(8,2)', high='double(8,2)', low='double(8,2)', symbol='varchar(10)'),  row.names=FALSE, overwrite=TRUE)
+```
+
+## Year to date Average
+
+sql
+```{r}
+dfyeartodateavg <- DBI::dbGetQuery(con, 
+"select
+	symbol, tradingdate, 
+    closeprice, avg(closeprice) over (partition by symbol order by tradingdate asc) as avg_closeprice,
+    volume, avg(volume) over (partition by symbol order by tradingdate asc) as avg_volume,
+    high, avg(high) over (partition by symbol order by tradingdate asc) as avg_high,
+    low, avg(low) over (partition by symbol order by tradingdate asc) as avg_low
+from
+	sp
+where
+	symbol = 'amd';")
+dfyeartodateavg
+```
+
+R for amd
+```{r order-by-preceding-amdytd, echo=TRUE}
+ytd <- dfsp[order(dfsp$tradingdate), 
+             c('symbol', 'tradingdate', 'closeprice', 'high')] %>%
+        filter(symbol == 'amd') %>%
+        mutate (
+          ytd_closeprice = cummean(closeprice),
+          ytd_high = cummean(high)
+        )
+print(ytd[, c('symbol','tradingdate','closeprice','ytd_closeprice','high','ytd_high')])
+```
+R for intc
+```{r order-by-preceding-intcytd, echo=TRUE}
+ytd <- dfsp[order(dfsp$tradingdate), 
+             c('symbol', 'tradingdate', 'closeprice', 'high')] %>%
+        filter(symbol == 'intc') %>%
+        mutate (
+          ytd_closeprice = cummean(closeprice),
+          ytd_high = cummean(high)
+        )
+print(ytd[, c('symbol','tradingdate','closeprice','ytd_closeprice','high','ytd_high')])
+```
+
+
+## Six day Moving Average
+
+Sql
+```{r}
+dfamdsixdaymoving <- DBI::dbGetQuery(con, 
+"select
+	symbol, tradingdate,
+    closeprice, avg(closeprice) over (order by tradingdate rows between 5 preceding and current row) as `smd_avg_price`,
+	volume, avg(volume) over (order by tradingdate rows between 5 preceding and current row) as sdm_avg_volume,
+	high, avg(high) over (order by tradingdate rows between 5 preceding and current row) as sdm_avg_high,
+	low, avg(low) over (order by tradingdate rows between 5 preceding and current row) as sdm_avg_low
+from
+	sp
+where
+	symbol = 'amd' and tradingdate <= '2022-01-10'
+order by
+	symbol, tradingdate asc;")
+dfamdsixdaymoving 
+```
+
+R for amd
+```{r order-by-preceding-amdsixday, echo=TRUE}
+moving_avg <- function(x, n) {
+  res <- c()
+  for(i in 1:length(x)){
+    res <- c(res, ifelse(i < n, mean(x[1:i]), mean(x[(i-(n-1)):i])))
+  }
+  return(res)
+}
+
+dfsixdaymoving <- dfsp %>%
+  filter(tradingdate < "2022-01-10" & symbol == 'amd') %>%
+  mutate (
+   moving_avg = moving_avg(closeprice, 6)
+  )
+
+print(dfsixdaymoving)
+```
+
+R for intc
+```{r order-by-preceding-intcsixday, echo=TRUE}
+moving_avg <- function(x, n) {
+  res <- c()
+  for(i in 1:length(x)){
+    res <- c(res, ifelse(i < n, mean(x[1:i]), mean(x[(i-(n-1)):i])))
+  }
+  return(res)
+}
+
+dfsixdaymoving <- dfsp %>%
+  filter(tradingdate < "2022-01-10" & symbol == 'intc') %>%
+  mutate (
+   moving_avg = moving_avg(closeprice, 6)
+  )
+
+print(dfsixdaymoving)
+```
+
+
+The argument transmitted as a function in mutate is an object or a variable.\
+
+For example, if the column name is closeprice, the entire closeprice column is transmitted as one object [ex. c('10', '20', '30', '40',…) or 1, 'a', etc.] \
+
+In addition, the return value from the function must have the same number of elements as the elements originally transmitted.\
+
+The moving_avg() function requires two arguments. The first argument accepts a column as a vector. The second factor is the number of rows to be treated as variables. The logic is very simple. First, generates an object **res <- c()** for return. Then, executes for…loop statement for number of element.  In the case of the 'six-day moving average', if the variable *i* is less than or equal to 5, only an average from 1 to the current *i* value is obtained. And if the variable *i* exceeds 5, an average of the current *i* value and the previous five values are obtained.\
+
+x = vector (column with values of data frame)
+n = number variable (2-day, 3-day, 4-day, ..., n-day)
+i = index of x -> 1 to length(x)
+res = result variable to return
+res <- c(res, value) -> res = (1), res <- c(res, 2) then res = (1, 2)
+
+moving_avg <- function(x, n) {
+  res <- c()
+  for(i in 1:length(x)){
+    res <- c(res, ifelse(i < n, mean(x[1:i]), mean(x[(i-(n-1)):i])))
+  }
+  return(res)
+}
+
+[example]
+x = (1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
+n = 6
+i = 1 -> res = (1)
+i = 2 -> res = (1, 1.5)
+i = 3 -> res = (1, 1.5, 2)
+i = 4 -> res = (1, 1.5, 2, 2.5)
+i = 5 -> res = (1, 1.5, 2, 2.5, 3)
+i = 6 -> res = (1, 1.5, 2, 2.5, 3, 3.5)
+i = 7 -> res = (1, 1.5, 2, 2.5, 3, 3.5, 4.5)
+i = 8 -> res = (1, 1.5, 2, 2.5, 3, 3.5, 4.5, 5.5)
+i = 9 -> res = (1, 1.5, 2, 2.5, 3, 3.5, 4.5, 5.5, 6.5)
+i = 10 -> res = (1, 1.5, 2, 2.5, 3, 3.5, 4.5, 5.5, 6.5, 7.5)
