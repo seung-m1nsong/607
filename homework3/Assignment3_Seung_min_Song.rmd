@@ -1,0 +1,217 @@
+---
+title: "Assignmnet 3 Seung Min Song"
+output:  
+  pdf_document: default
+  html_document:
+  includes:
+  in_header: header.html
+css: ./lab.css
+highlight: pygments
+theme: cerulean
+toc: true
+toc_float: true
+linkcolor: blue
+date: "2022-09-18"
+---
+Team member: Ted Kim\
+GitHub: <https://github.com/seung-m1nsong/607>\
+rpub: <https://rpubs.com/seungm1nsong/943748>
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(eval=TRUE, message=FALSE, echo=FALSE, warning=FALSE)
+```
+
+```{r install-packages, echo=FALSE}
+
+arrPackages <- c('RMySQL', 'DBI', 'dplyr', 'tidyverse', 'ggplot2', 'formatR')
+
+installed_packages <- arrPackages %in% rownames(installed.packages())
+
+if (any(installed_packages == FALSE)) {
+  install.packages(arrPackages[!installed_packages], 
+                   repos = "http://cran.us.r-project.org")
+}
+
+invisible(lapply(arrPackages, library, character.only = TRUE))
+
+```
+
+
+## Question 1
+Using the 173 majors listed in fivethirtyeight.com’s College Majors dataset\ <https://fivethirtyeight.com/features/the-economic-guide-to-picking-a-college-major/>, provide code that identifies the majors that contain either "DATA" or "STATISTICS"
+```{r filtermajor-data}
+
+dfmajordata <- read.csv('https://raw.githubusercontent.com/fivethirtyeight/data/master/college-majors/majors-list.csv')
+
+dfmajordata %>%
+  filter(str_detect(Major, 'DATA|STATISTICS'))
+```
+
+```{r regexfiltermajor-data}
+dfmajordata <- read.csv('https://raw.githubusercontent.com/fivethirtyeight/data/master/college-majors/majors-list.csv')
+regex1 = 'DATA|STATISTICS'
+dfmajordata %>%
+  filter(str_detect(Major, regex1))
+```
+
+```{r using-mutate, echo=TRUE}
+
+regex1 = 'DATA|STATISTICS'
+
+df <- dfmajordata %>%
+        mutate(is_include = lapply(dfmajordata$Major, function(str) {
+                                  str_detect(str, regex1)
+                                }))
+
+#The following error occurred when trying to sort the column created using the lapply() 
+#function.
+#  unimplemented type 'list' in 'orderVector1'
+#This is caused by the inclusion of a non-vector list in the data frame, which should be 
+#converted to classical format using as.data.frame.
+
+df2 <- as.data.frame(lapply(df, unlist))
+
+print(df2[order(-df2$is_include), c('Major', 'is_include')], 
+      row.names = FALSE, right = FALSE)
+
+```
+
+## Question 2
+Write code that transforms the data below:
+
+[1] "bell pepper"  "bilberry"     "blackberry"   "blood orange"
+[5] "blueberry"    "cantaloupe"   "chili pepper" "cloudberry"  
+[9] "elderberry"   "lime"         "lychee"       "mulberry"    
+[13] "olive"        "salal berry"
+
+Into a format like this:
+c("bell pepper", "bilberry", "blackberry", "blood orange", "blueberry", "cantaloupe", "chili pepper", "cloudberry", "elderberry", "lime", "lychee", "mulberry", "olive", "salal berry")\
+```{r transforms-th-data, echo=TRUE}
+str <- paste0('[1] "bell pepper"  "bilberry"     "blackberry"   "blood orange"',
+              '[5] "blueberry"    "cantaloupe"   "chili pepper" "cloudberry"',
+              '[9] "elderberry"   "lime"         "lychee"       "mulberry"',
+              '[13] "olive"        "salal berry"')
+cat(str)
+
+#step 1. remove '[#] 'and multiple white space
+str <- str_replace_all(str, '\\[\\d+?\\]\\s|\\s{2,}', '')
+cat(str)
+
+#step 2. replace '""' to '", "'
+str <- str_replace_all(str, '\\"\\s?\\"', '\\", \\"')
+cat(str)
+forVec <- str
+
+#step 3. replace '"' start of strings(line) to 'c("'
+str <- str_replace_all(str, '^\\"', 'c(\\"')
+cat(str)
+
+#step 4. replace '"' end of strings(line) to '")'
+str <- str_replace_all(str, '\\"$', '\\")')
+cat(str)
+
+cat(str_replace_all(str, '\\[\\d+?\\]\\s|\\s{2,}', '') %>%
+      str_replace_all('\\"\\s?\\"', '\\", \\"') %>%
+      str_replace_all('^\\"', 'c(\\"') %>%
+      str_replace_all('\\"$', '\\")'))
+
+#extra) string to vector
+print(str_split(str_replace_all(forVec, '\\"', ''), ', ', simplify = FALSE)[[1]][2])
+
+
+#another flow
+str <- paste0('[1] "bell pepper"  "bilberry"     "blackberry"   "blood orange"',
+              '[5] "blueberry"    "cantaloupe"   "chili pepper" "cloudberry"',
+              '[9] "elderberry"   "lime"         "lychee"       "mulberry"',
+              '[13] "olive"        "salal berry"')
+cat(str)
+
+#step 1. replace '[#] ' start of strings(line) to 'c('
+str <- str_replace_all(str, '^\\[\\d+?\\]\\s', 'c(')
+cat(str)
+
+#step 2. replace '"   "' to '", "'
+str <- str_replace_all(str, '\\"\\s\\"', '\\", \\"')
+cat(str)
+
+#step 3. replace '[#] ' in the middle of strings(line) to ', '
+str <- str_replace_all(str, '\\[\\d+?\\]\\s', ', ')
+cat(str)
+
+#step 4. replace '"' end of strings(line) to '")'
+str <- str_replace_all(str, '\\"$', '\\")')
+cat(str)
+
+cat(str_replace_all(str, '^\\[\\d+\\]\\s', 'c(') %>%
+      str_replace_all('\\"\\s+\\"', '\\", \\"') %>%
+      str_replace_all('\\[\\d+\\]\\s+', ', ') %>%
+      str_replace_all('\\"$', '\\")'))
+```
+
+
+## Question 3 
+Describe, in words, what these expressions will match:\
+
+* (.)\1\1: A capturing group of any character repeats three times in a row.\
+* "(.)(.)\\2\\1": Two capturing groups consisting of one character each and the next content of capturing are connected by the reverse order. Four letters are palindrome.\
+* (..)\1 : A group of two-characters repeats two times.\
+* "(.).\\1.\\1": A group of a syllable(character) is repeated three times. The first, third, and fifth characters should be the same, but the second and fourth can be any other character. Furthermore, all five can be the same character.\
+* "(.)(.)(.).*\\3\\2\\1": The first three letters and the last three letters as a palindrome.
+
+## Question 4 
+Construct regular expressions to match words that:\
+
+```{r define-arr, echo=TRUE}
+arr <- c('church', 'buddy', 'tomato', 'eleven', 'bahama', 
+         '12345612', '1234', 'seventeen', 'mom')
+```
+* Start and end with the same character.
+```{r echo=TRUE}
+# ^: start of string(line)
+# $: end of string(line)
+# .: any character except line break
+# *: zero or more times
+# (): capturing group
+# \\1: contents of group 1
+regex4_1 = '^(.).*\\1$'
+str_detect(arr, regex4_1)
+```
+* Contain a repeated pair of letters (e.g. "church" contains "ch" repeated twice.)
+```{r echo=TRUE}
+# Start and end with the same (allow letter only)
+# ^: start of string(line)
+# $: end of string(line)
+# [a-zA-Z]: only letter
+# *: zero or more times
+# (): capturing group
+# \\1: contents of group 1
+# {2}: exactly two times
+regex4_2_1 = '^([a-zA-Z]{2})[a-zA-Z]*\\1$'
+str_detect(arr, regex4_2_1)
+
+# any position (allow letter only)
+regex4_2_2 = '([a-zA-Z]{2})[a-zA-Z]*\\1'
+str_detect(arr, regex4_2_2)
+
+# Start and end with the same (allow any character)
+regex4_2_3 = '^(.{2}).*\\1$'
+str_detect(arr, regex4_2_3)
+
+# any position (allow any character)
+regex4_2_4 = '(.{2}).*\\1'
+str_detect(arr, regex4_2_4)
+
+```
+* Contain one letter repeated in at least three places (e.g. "eleven" contains three "e"s.)
+```{r at-lease-three-places, echo=TRUE}
+# *: zero or more times
+# (): capturing group# 
+# .: any character except line break
+# \\1: contents of group 1
+# {2}: exactly two times
+regex4_3 = '(.).*\\1.*\\1'
+str_detect(arr, regex4_3)
+
+```
+
+
