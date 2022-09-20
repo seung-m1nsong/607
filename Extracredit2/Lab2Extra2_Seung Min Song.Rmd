@@ -1,0 +1,237 @@
+---
+title: "Extra Credit2 (Movie Rating) Seung Min Song"
+output:  
+  html_document:
+  pdf_document: default
+  includes:
+  in_header: header.html
+css: ./lab.css
+highlight: pygments
+theme: cerulean
+toc: true
+toc_float: true
+linkcolor: blue
+date: "2022-09-18"
+---
+Team member: Ted Kim\
+GitHub: <https://github.com/seung-m1nsong/607>\
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(eval=TRUE, message=FALSE, echo=FALSE, warning=FALSE)
+```
+
+```{r install-packages, echo=FALSE}
+
+arrPackages <- c('RMySQL', 'DBI', 'dplyr', 'tidyverse', 'ggplot2', 'tidyr')
+
+installed_packages <- arrPackages %in% rownames(installed.packages())
+
+if (any(installed_packages == FALSE)) {
+  install.packages(arrPackages[!installed_packages], 
+                   repos = "http://cran.us.r-project.org")
+}
+
+invisible(lapply(arrPackages, library, character.only = TRUE))
+
+```
+## Survey software
+
+I used Google Forms to gather the movie reviewers' survey response. \
+
+## CSV
+
+Please visit <https://github.com/seung-m1nsong/607> homework2 to view my mysql query\
+
+View GitHub CSV file to RStudio
+```{r reviewdata-data}
+movie <- data.table::fread( "https://raw.githubusercontent.com/seung-m1nsong/607/main/homework2/Movie_Rating.csv", 
+               select=c("firstname","lastname","age", "sex", "location","SpiderMan","Thor","Top_Gun","Morbius","Toronto", "Doctor_Strange"))
+
+movie
+```
+
+
+## mysql
+
+Please visit <https://github.com/seung-m1nsong/607> homework2 to view my mysql query\
+
+Connect RStudio with my local mysql
+```{r dbconnect-data}
+con <- DBI::dbConnect(
+  RMySQL::MySQL(), 
+  user="root", 
+  password="",
+  host="localhost", 
+  dbname="moviedatabase"
+)
+```
+
+View movie list
+```{r movielist-data}
+ dfMovielist <- DBI::dbGetQuery(con, 
+"select * from movie")
+dfMovielist
+```
+
+```{r movierating-data}
+ dfMovierating <- DBI::fetch(DBI::dbSendQuery(con, 
+"select reviewer, movie, rating from Movierating"),)
+dfMovierating
+```
+
+View all movie reviewer
+```{r movierevier-data}
+ dfMovieReviewer <- DBI::dbGetQuery(con, 
+"select * from reviewer")
+dfMovieReviewer
+```
+
+Show movie title with rating from reviewers.\
+I joined two table: Table called 'move' and 'movierating'
+```{r moviereiviewrating-data}
+ dfMovieReviewAverage <- DBI::dbGetQuery(con, 
+"select movie.movietitle, avg(movierating.rating) as avg_rating, min(movierating.rating) as min_rating, max(movierating.rating) as max_rating
+from  movie
+inner join movierating
+ON movierating.movie = movie.movietitle
+group by movie.movietitle;")
+
+dfMovieReviewAverage
+```
+
+## Standarizing data
+
+Data standardization is an important due to the fact that it provides a structure for creating and maintaining data quality\
+
+For example, the analysis of vulnerable areas for Covid-19 is a standard analysis model developed by New York City. However, if New Jersey data is inputed according to the data format, it can be used in New Jersey. This model can be easily used to analyze areas where there is shortage of COVID-19 screening clinics.
+
+## About missing record
+```{r find-na-location, echo=TRUE}
+#step 0: insert the old survey data into a new data frame for easier viewing.
+
+df <- dfMovierating
+
+# There is no record for the review with no rating in the table because Null values are not stored in the data for data integrity. Therefore, use pivot_wider() and pivot_longer() function to create missing record. \c
+
+#step 1. Use the pivot_wider() function to create a data frame identical to Excel format. missing record will display as a a NA.
+
+pv_wider <- df %>%
+  pivot_wider(
+    names_from = movie,
+    values_from = rating
+  )
+print(pv_wider)
+```
+
+```{r pvlonger-data, echo=TRUE}
+#step 2: if change the data frame created in step 1 to its original form using the pivot_longer() function, a data frame including the missing record is created.
+
+pv_longer <- pv_wider %>%
+              pivot_longer(
+                cols = colnames(pv_wider)[2:7],
+                names_to = 'movie',
+                values_to = 'rating'
+              )
+
+print(pv_longer)
+```
+
+```{r movieavg-data, echo=TRUE}
+#step 3: use is.na()function to exclude NA value. After that calculate movie_avg for each movie. (identical to Excel)
+
+movie_avg <- pv_longer %>%
+                filter(!is.na(rating)) %>%
+                group_by(movie) %>%
+                summarise(movie_avg = mean(rating))
+print(movie_avg)
+```
+
+```{r moviemean-data, echo=TRUE}
+#step 4: use is.na() function to exclude NA value. After that calculate movie_mean.
+
+movie_mean <- mean((pv_longer %>%
+                      filter(!is.na(rating)))$rating)
+
+print(movie_mean)
+
+```
+
+```{r moviecompute-data, echo=TRUE}
+#step 5: Using mutate, add column named sub_avg_mean in the movie_avg created in step 3 and insert movie_mean subtacted from movie_avg (identical to Excel B19:G19).
+movie_compute <- movie_avg %>%
+                              mutate(subs_avg_mean = movie_avg - movie_mean)
+
+print(movie_compute)
+```
+
+```{r usercompute-data, echo=TRUE}
+#step 6: use is.na()function to exclude NA value. After that calculate each person's user_avg and user_avg_mean_movie (identical to Excel H2:17, I2:17).
+
+user_compute <- pv_longer %>%
+                  filter(!is.na(rating)) %>%
+                  group_by(reviewer) %>%
+                  mutate(
+                    user_avg = mean(rating),
+                    sub_user_avg_mean_movie = mean(rating) - movie_mean
+                  )
+
+print(user_compute)
+
+
+```
+
+```{r findNA-data, echo=TRUE}
+#step 7: use is.na()function to bring record with NA value and merge(m1) with the movie_compute crated in step 5 (same as Join in SQL). then, select  'reviewer', 'user_avg', 'sub_user_avg_mean_movie' from user_compute in step 6 to distinct using unique() function for merge with m1. Calculate rate to insert. 
+
+
+m1 <- merge(pv_longer[is.na(pv_longer$rating),], movie_compute)
+print(m1)
+
+m2 <- merge(m1,
+            unique(user_compute[,c('reviewer', 'user_avg', 'sub_user_avg_mean_movie')]),
+            by.x=c('reviewer'),
+            by.y=c('reviewer')) %>%
+      mutate(rating = round(movie_mean + subs_avg_mean + sub_user_avg_mean_movie, 0)) %>%
+      select('reviewer', 'movie', 'rating', 'user_avg', 'sub_user_avg_mean_movie')
+print(m2)
+```
+  
+```{r fianlunion-data, echo=TRUE}  
+#step 8: combine m2 created in step 7 and user_compute with no NA record using the union() function.
+final <- union(user_compute, m2)
+
+print(final)
+
+```
+
+```{r final-data, echo=TRUE}
+#step 9: use pivot_wider() function to make the data frame created in step 8 identical to Excel format and display on the screen. Use the Excel formula to review the value. 
+
+final %>%
+  pivot_wider(
+    names_from = movie,
+    values_from = rating
+  ) %>%
+  select(1, 4:9, 2, 3)
+
+# mean_movie
+movie_mean
+
+# movie_avg
+merge(movie_compute, dfMovierating) %>%
+  select('movie', 'movie_avg') %>%
+  pivot_wider(
+    names_from = movie,
+    values_from = movie_avg
+  )
+# avg-mean
+merge(movie_compute, dfMovierating) %>%
+  select('movie', 'subs_avg_mean') %>%
+  pivot_wider(
+    names_from = movie,
+    values_from = subs_avg_mean
+  )
+
+
+```
