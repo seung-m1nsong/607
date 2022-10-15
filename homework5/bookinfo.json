@@ -1,0 +1,33 @@
+[
+	{
+		"ISBN": "9781414334905",
+		"Title": "Left Behind",
+		"Author": 
+			[
+				"Tim LaHaye",
+				"Jerry B. Jenkins"
+			],
+		"Publisher": "Tyndale House Publishers",
+		"Pages": 496
+	},
+	{   
+        "ISBN": "9781455563920",
+        "Title": "Pachinko",
+        "Author":
+			[ 
+				"Min Jin Lee"
+			],
+        "Publisher": "Grand Central Publishing",
+        "Pages": 512
+	},
+	{
+        "ISBN": "978068480122",
+        "Title": "The Old Man and the Sea",
+        "Author":
+			[
+				"Ernest Hemingway"
+			],
+        "Publisher": "Scribner",
+        "Pages": 128
+	}
+]
