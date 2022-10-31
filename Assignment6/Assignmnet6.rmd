@@ -1,0 +1,51 @@
+---
+title: "Assignment 6"  
+author: "Seung Min Song"
+date: "2022-10-30"
+output:
+  pdf_document: null
+  latex_engine: xelatex
+  html_document:
+    df_print: paged
+fontsize: 10pt
+linestretch: 1.5
+---
+
+GitHub: <https://github.com/seung-m1nsong/607>\
+rpubs: <https://rpubs.com/seungm1nsong/963987>
+  
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(dplyr)
+library(ggplot2)
+library(jsonlite)
+library(stringr)
+```
+## Assignment
+
+The New York Times web site provides a rich set of APIs, as described here: <https://developer.nytimes.com/apis>\
+You’ll need to start by signing up for an API key.\
+Your task is to choose one of the New York Times APIs, construct an interface in R to read in the JSON data, and transform it into an R DataFrame.
+
+## API
+If the user does not have an account, they must first create an account at <https://developer.nytimes.com/>. After creating an account, you must apply for and receive an API key. I chose the US top story API for this assignment.
+```{r}
+url <- "https://api.nytimes.com/svc/topstories/v2/us.json?api-key="
+api_key <- "m5dpIvS3G7Y9JxotqgiQPJOQAQlg07j8" #personal API Key
+api_path <- paste(url,api_key, sep = "")
+
+```
+\
+Read json data and insert it into R data frame. If you receive JSON-formatted data as HTTP Response, you can easily organize the desired data using the jsonlite package. You just need to convert the HTTP Response object to text and then extract the data in JSON format.
+```{r}
+usTop <- as.data.frame(fromJSON(api_path))
+```
+\
+Review the data frame.
+```{r}
+head(usTop)
+colnames(usTop)
+```
+
+
