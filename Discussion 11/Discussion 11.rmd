@@ -1,0 +1,49 @@
+---
+title: "Discussion 11"  
+author: "Seung Min Song"
+date: "2022-11-02"
+output:
+  html_document:
+    df_print: paged
+  latex_engine: xelatex
+  pdf_document: null
+fontsize: 10pt
+linestretch: 1.5
+---
+
+## Introduction 
+
+### Yahoo Finance\
+\
+Yahoo Finance is a website that provides financial news, data, and analysis. The site also includes a stock ticker and portfolio tracker. Yahoo Finance is one of the most popular finance websites on the internet.
+
+## Scenario design
+\
+Who are the target users of the site? Yahoo finance is for people who wants to receive financial news, data and commentary including stock quotes, press releases, financial reports, and original content.\
+\
+What are their key goals? Provide information to general user and attract people to sign up for the Yahoo Finance Plus. Yahoo Finance Plus is a premium subscription service that provides actionable data and advanced tools for investors to trade with confidence.\
+\
+How can the site help the users accomplish their goals? Yahoo finance puts all the news related to the stock in one place, making it easier for people to know the current status of the stock they want to buy.\
+\
+
+## How Yahoo Finance gets its data.
+\
+Yahoo have their contracts with different data vendors to provide data. Yahoo Finance provides real-time streaming quotes for many exchanges. Real-time data is available during an exchange's market hours, and in some cases during pre-market and post-market hours.\
+\
+US quotes are real-time for NASDAQ, NYSE, and NYSE American when available from Nasdaq Last Sale and if not available it will appear delayed from the consolidated tape. See delay times for other exchanges below. Quotes are updated automatically but will be turned off after 25 minutes of inactivity.\
+
+  * Upgrades and downgrades provided by Benzinga.
+  * Sustainability data provided by Sustainalytics and Morningstar.
+  * Company profile data provided by S&P Global Market Intelligence.
+  * Top institutional and mutual fund holders provided by Vickers-stock.com.
+  * International historical chart data and daily updates provided by Morningstar.
+  * Corporate governance scores provided by Institutional Shareholder Services.
+  * SEC Filings and US IPO data is provided by EDGAR Online, a division of Donnelley Financial LLC.
+  * US equities and global index historical data and daily updates provided by Commodity Systems, Inc.
+  * Financial statements, valuation ratios, market cap and shares outstanding data provided by Morningstar.
+  * Analyst estimates, earnings, corporate, economic events, non-US IPO, and insider transactions data provided by Refinitiv*.
+  
+## Ways to improve the site
+\
+Yahoo Finance has previously said that the comment box is not very good. There are a lot of comments that have nothing to do with stocks, and the thing that received the worst reviews is that there is a lot of false information. Blocking users who maliciously post incorrect information will improve the website.
+ 
