@@ -28,7 +28,8 @@ The tidyverse is quickly replacing the original R syntax with the advantage of b
 \
 If I had to pick just one of the most important things in the tidyverse ecosystem, I would choose the %>% operator from the magrittr package. %>% can be entered with the shortcut Ctrl + Shift + M (OS X: Cmd + Shift + M) in Rstudio, and by using this, you can code in a stream of consciousness and write intuitive code. Let's find out the advantages of %>% through the head function.
 ```{r}
-dfdata <- read.csv(file = 'car_purchasing.csv', header = TRUE)
+url <- "https://raw.githubusercontent.com/seung-m1nsong/607/main/tidyverse/car_purchasing.csv"
+dfdata <- read.csv(url) 
 ```
 ```{r}
 ## head(dfdata)
