@@ -1,0 +1,504 @@
+---
+title: DATA 607 Final Project
+author: Seung Min Song
+output:  
+  html_document:
+  pdf_document: default
+  includes:
+  in_header: header.html
+css: ./lab.css
+highlight: pygments
+theme: cerulean
+toc: true
+toc_float: true
+linkcolor: blue
+date: "2022-12-04"
+---
+GitHub: <https://github.com/seung-m1nsong/607/tree/main/Final%20Project>\
+Rpub: <https://rpubs.com/seungm1nsong/978730>
+
+```{r echo=FALSE}
+install.packages("infer", repos = "http://cran.us.r-project.org")
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(ggplot2)
+library(dplyr)
+library(infer)
+library(magrittr)
+library(RMySQL)
+library(DBI)
+options(warn=-1)
+
+```
+
+## Part 1 - Introduction
+
+I would like to take this opportunity to utilize all the knowledge and skills I have learned from this class. I used CSV, MySQL and R to obtain and scrub the data from kaggle.com. The dataset is called, Car Sales Price Prediction, and all variables are independent variables. This is an observational study with a quantitative data set. The main objective of this project is to study the relationship and correlation between average salary, net worth, and car purchase amount. In my project, I will use the following packages; **ggplot2**, **dplyr**, **tidyverse**, **magrittr** and **Infer**, **RMySQL**, **DBI** . In the end, I will use the Infer package to calculate a confidence interval for two other categorical variables in my dataset.
+
+## Part 2 - Data
+
+I downloaded the csv data table from the link below:\
+https://www.kaggle.com/datasets/yashpaloswal/ann-car-sales-price-prediction
+
+### CSV
+
+View GitHub CSV file to RStudio
+```{r reviewdata-data}
+dfdata <- data.table::fread( "https://raw.githubusercontent.com/seung-m1nsong/607/main/Final%20Project/car_purchasing.csv", 
+               select=c("customer_name",	"customer_email",	"country",	"gender",	"age",	"annual_Salary",	"credit_card_debt",	"net_worth",	"car_purchase_amount"))
+```
+
+```{r}
+dfdata %>% head(n=10)
+```
+
+### Data Transformtion, Cleanup and Preparation:
+
+change gender value **1** and **0** to **M** and **F**. 
+```{r}
+dfdata <- transform(dfdata, gender = ifelse(gender == '0', 'F', 'M'))
+head(dfdata)
+```
+
+Convert **gender** and **country** data type; double to Character.
+```{r}
+dfdata %>%
+  mutate_at(c('gender', 'country'), as.character)
+```
+
+create new column with auto increment named, **customerid**. I will use this **custoemrid** to connect all my sql tables. 
+```{r}
+dfdata1 <- cbind(customerid = 1:nrow(dfdata), dfdata)
+head(dfdata1)
+```
+
+### MySQL
+
+We will start with creating a data frame to store the data.
+
+```{r dfdata_customer}
+dfdata_customer <- dfdata1 %>%
+ select(c(customerid,customer_name, customer_email, country, gender, age))
+dfdata_customer
+```
+
+```{r dfdata_salary}
+dfdata_salary <- dfdata1 %>%
+  select(c(customerid, annual_Salary))
+dfdata_salary
+```
+
+```{r dfdata_debt}
+dfdata_debt <-  dfdata1 %>%
+  select(c(customerid, credit_card_debt))
+dfdata_debt
+```
+
+```{r dfdata_networth}
+dfdata_networth <-  dfdata1 %>%
+  select(c(customerid, net_worth))
+dfdata_networth
+```
+
+```{r dfdata_carpurchaseamount}
+dfdata_carpurchaseamount <-  dfdata1 %>%
+  select(c(customerid, car_purchase_amount))
+dfdata_carpurchaseamount
+```
+
+Please visit <https://github.com/seung-m1nsong/607> **Final Project** to view my MYSQL query.
+
+```{r dbconnect-data}
+# Connect with my Local MySQl Database.
+con <- DBI::dbConnect(
+  RMySQL::MySQL(), 
+  user="root", 
+  password="",
+  host="localhost", 
+  dbname="carprice"
+)
+```
+
+Using dbWriteTable() function, I will send my R data frames to SQL tables.
+```{r}
+table_names <- c('customer', 'salary', 'debt','networth', 'carpurchaseamount')
+df <- list(dfdata_customer, dfdata_salary, dfdata_debt, dfdata_networth, dfdata_carpurchaseamount)
+lapply(seq_along(table_names), function(i) dbWriteTable(con, table_names[[i]], df[[i]], row.names=FALSE, append=TRUE))
+```
+
+### Histogram
+
+Select only columns that are relevant for our purpose. I am not interested in any personal information for the analysis. Therefore I removed **customer_name** and **customer_email** from my dataframe.
+
+```{r}
+dfdata <- subset (dfdata, select = -c(customer_name,customer_email))
+head(dfdata)
+```
+
+All histograms were normally distributed. Also, outliers exist in all histograms. The important thing here is that the younger you are, the more debt you have.
+
+```{r echo=FALSE}
+ggplot(dfdata, aes(x=annual_Salary), bins = 4) + 
+  geom_histogram(fill="skyblue", alpha=0.5, bins=30)+
+  ggtitle("Salary") +
+  theme_minimal()
+```
+
+```{r echo=FALSE}
+ggplot(dfdata, aes(x=age)) + 
+  geom_histogram(fill="skyblue", alpha=0.5, bins=30)+
+  ggtitle("Age") +
+  theme_minimal()
+```
+
+```{r echo=FALSE}
+ggplot(dfdata, aes(x=net_worth)) + 
+  geom_histogram(fill="skyblue", alpha=0.5, bins=30)+
+  ggtitle("Net Worth") +
+  theme_minimal()
+```
+
+```{r echo=FALSE}
+ggplot(dfdata, aes(x=credit_card_debt)) + 
+  geom_histogram(fill="skyblue", alpha=0.5, bins=30)+
+  ggtitle("Credit Card Debt") +
+  theme_minimal()
+```
+
+```{r echo=FALSE}
+ggplot(dfdata, aes(x=annual_Salary)) + 
+  geom_histogram(fill="skyblue", alpha=0.5, bins=30)+
+  ggtitle("Average Salary") +
+  theme_minimal()
+```
+
+```{r echo=FALSE}
+ggplot(dfdata, aes(x=car_purchase_amount)) + 
+  geom_histogram(fill="skyblue", alpha=0.5, bins=30)+
+  ggtitle("Car Purchase Amount") +
+  theme_minimal()
+```
+
+## Part 3 - Exploratory data analysis
+
+The minimum age is 20 years old while the oldest is 70 years. The average age is around 62 years. The age is distributed from 20 to 70. The minimum salary is **$20,000** while the maximum salary is **$100,000**. The average salary is around **$62,916** years. The minimum car purchase amount is **$9,000** while the maximum car purchase amount is **$80,000**. The average car purchase amount is around 44,210 years.
+```{r}
+summary(dfdata$age)
+summary(dfdata$annual_Salary)
+summary(dfdata$credit_card_debt)
+summary(dfdata$net_worth)
+summary(dfdata$car_purchase_amount)
+```
+
+### Gender
+
+We have 253 male and 247 female in this study. Female average price is higher than man. However, man has highest car purchase amount. The boxplots show that the medians and interquartile range of the two distributions are very close. 
+
+```{r echo=FALSE}
+gd <- dfdata %>% 
+        group_by(gender) %>% 
+        summarise(car_purchase_amount = mean(car_purchase_amount))
+gd
+```
+
+```{r echo=FALSE}
+ggplot(dfdata, aes(x = gender, y = car_purchase_amount, color = gender, fill = gender)) +
+  geom_bar(data = gd, stat = "identity", alpha = .3) + 
+    ggrepel::geom_text_repel(aes(label = annual_Salary), color = "black", size = 2.5, segment.color = "grey") +
+      geom_point() +
+        guides(color = "none", fill = "none") +
+        theme_bw() +
+        labs(
+          title = "Car Purchase Amount by Gender",
+          x = "Gender",
+          y = "Car Purchase Amount"
+        )
+```
+
+### Age
+
+Total paid to a car vs age separated with genders. Car purchase amount increases when age increases.
+
+```{r echo=FALSE}
+df <-dfdata %>%
+      group_by(age, gender) %>% 
+      select(-c('country')) %>%
+      summarize_all(mean)
+df
+```
+
+```{r echo=FALSE}
+df %>% 
+    ggplot(aes(x = age, y = car_purchase_amount, shape =gender, colour = gender)) + 
+       stat_smooth(se = TRUE, method = lm) +
+        geom_point(aes(x = age, y = car_purchase_amount, colour = gender), size = 2.5) +
+            ggtitle("Total paid to a car vs Age separated with genders") +
+              theme_minimal()
+        
+```
+
+Creating a data frame which will store **age**.
+```{r}
+p <-  as.data.frame(71)
+colnames(p) <- "age"
+```
+
+
+Calculating the correlation between **age** and **car_purchase_amount**.
+
+```{r}
+cor(dfdata$car_purchase_amount,dfdata$age)
+```
+
+It means for a change in one unit in **age** will bring 853.83 units to change in **car_purchase_amount**.
+```{r}
+model1 <- lm(car_purchase_amount ~ age, data = dfdata)
+summary(model1)
+```
+
+I can predict at the age of 71 the **car_purchase_amount** will be $65364.19.
+```{r}
+predict(model1, newdata = p)
+```
+            
+### Country
+
+```{r echo=FALSE}
+ct <- dfdata %>% 
+        group_by(country) %>% 
+        summarise(avg_annual_Salary  = mean(annual_Salary),
+                  avg_car_purchase_amount = mean(car_purchase_amount)
+                   ) 
+ct
+```
+
+Use ggplot() + geom_point to compare **car_purchase_amount** by **country**. The **geom_abline** displays the red line in the graph. Any country name above the red line indicates annual salary is higher than the purchased car price and the country name below the red line indicates annual salary is lower than the purchased car price. Most of countries purchased a car below their annual salary.
+```{r echo=FALSE}
+ct %>%
+ggplot(aes(x = avg_car_purchase_amount, y = avg_annual_Salary, label = country)) + 
+  geom_point(aes(x = avg_car_purchase_amount, y = avg_annual_Salary, label = country)) +
+    geom_label(
+    nudge_x = 0, nudge_y = 0) +
+      geom_abline(intercept = 0, slope = 1, size = 0.5, color = 'IndianRed') + 
+        labs(
+            x = 'Average Car Amount',
+            y = 'Average Annual Salary') +
+              ggtitle("Average Car Purchase Amount vs Average Annual Salary by Country") +
+              theme_minimal()
+```
+
+### Salary
+
+Comparatively, women bought more expensive cars than men. Probably because the more expensive the car, the safer it is. Also, as seen here, the higher the annual salary, the higher the car purchase price.
+```{r echo=FALSE}
+sa <- dfdata %>% 
+      group_by(gender, annual_Salary) %>% 
+      summarize_all(mean)
+sa
+```
+
+```{r echo=FALSE}
+sa %>% 
+    ggplot(aes(x = annual_Salary, y = car_purchase_amount, shape =gender, colour = gender,)) + 
+       stat_smooth(se = TRUE, method = lm) +
+        geom_point(aes(x = annual_Salary, y = car_purchase_amount, colour = gender), size = 2.5) +
+            ggtitle("Total paid to a car vs annual salary separated with genders") +
+            theme_minimal()
+        
+```
+
+Creating a data frame which will store **annual Salary**.
+```{r}
+s <-  as.data.frame(65000)
+colnames(s) <- "annual_Salary"
+```
+
+Calculating the correlation between **annual_Salary** and **car_purchase_amount**.
+
+```{r}
+cor(dfdata$car_purchase_amount,dfdata$annual_Salary)
+```
+
+It means for a change in one unit in **annual_Salary** will bring 853.83 units to change in **car_purchase_amount**.
+```{r}
+model2 <- lm(car_purchase_amount ~ annual_Salary, data = dfdata)
+summary(model2)
+```
+
+I can predict at with 65,000 annual Salary the **car_purchase_amount** will be $45843.69.
+```{r}
+predict(model2, newdata = s)
+```
+
+### Net Worth
+
+```{r echo=FALSE}
+nw <- dfdata %>% 
+      group_by(age, gender) %>% 
+      summarize_all(mean)
+nw
+```
+
+```{r echo=FALSE}
+nw %>% 
+    ggplot(aes(x = age, y = net_worth, shape =gender, colour = gender,)) + 
+       stat_smooth(se = TRUE, method = lm) +
+        geom_point(aes(x = age, y = net_worth, colour = gender), size = 2.5) +
+            ggtitle("Net worth vs Age Seperated with Gender") +
+              theme_minimal()
+        
+```
+
+Classing People via their Net Worth and Net Worth for each Class.
+
+```{r echo=FALSE}
+nwclass <- dfdata %>% 
+  mutate(class = 4-as.integer((dfdata$net_worth-1)/250000))
+
+head(nwclass)
+```
+
+```{r echo=FALSE}
+nwclass_palette <- c('1'='#F8766D',
+                       '2'='#4fba3a',
+                       '3'='#619CFF',
+                       '4'='#ebe046')
+nwclass_palette
+```
+
+```{r echo=FALSE}
+nwclass %>%
+  ggplot(aes(x = class,y = net_worth, fill = as.factor(class))) + 
+    geom_bar(stat="identity") +
+      scale_fill_manual(values=nwclass_palette) + 
+       ggtitle("Classing People via Their Net Worth") +
+            theme_minimal()
+     
+```
+
+Creating a data frame which will store **annual Salary** and **net_Worth**.
+```{r echo=FALSE}
+annual_Salary <- c(65000)
+net_worth <- c(500000)
+sn <-  data.frame(annual_Salary, net_worth)
+```
+
+Calculating the correlation between **annual_Salary** + **net_Worth** and **car_purchase_amount**.
+```{r echo=FALSE}
+dfsn <- subset (dfdata, select = -c(country,gender))
+head(dfsn)
+```
+
+Using cor( ) function and round( ) function we can round off the correlation between all variables of the dataset dfsn to two decimal places.
+```{r echo=FALSE}
+round(cor(dfsn),2)
+```
+
+It means for a change in one unit in **annual_Salary** + **net_Worth** will bring 853.83 units to change in **car_purchase_amount**.
+```{r}
+model3 <- lm(car_purchase_amount ~ annual_Salary + net_worth, data = dfsn)
+summary(model3)
+```
+
+I can predict at with 65,000 annual Salary and 500000 networth the **car_purchase_amount** will be $47865.01.
+
+```{r}
+predict(model3, newdata = sn)
+```
+
+## Part 4 - Inference
+
+The cases are car purchase amount and there are 500 cases in the data set. 
+
+```{r}
+summary(dfdata)
+```
+
+Both sample sizes are bigger than 30, it is a random sample, and observation is independent. Therefore the conditions for inference should be satisfied.
+```{r }
+by(dfdata$car_purchase_amount, dfdata$gender, length)
+```
+
+### Hypothesis Test
+
+HO: The average car purchase amount of a people who has net worth more than average is the same as a people who has less than average.
+HA: The average car purchase amount of a people who has net worth more than average is different as a people who has less than average.
+
+The average net worth is $431,476. Use **mutate** to add new column named **net_worth_average**, values with **above** and  **below**.
+```{r}
+dfdata <- dfdata %>% 
+  mutate(net_worth_average = ifelse(dfdata$net_worth > 431476, "above", "below"))
+head(dfdata)
+```
+
+```{r }
+# Sample size for each category
+dfdata %>% 
+  group_by(net_worth_average) %>% 
+  summarise(freq = table(net_worth)) %>%
+  summarise(n = sum(freq))
+```
+
+Calculate the standard deviation.
+```{r}
+dfdata %>% 
+  group_by(net_worth_average) %>% 
+  summarise(sd_car_purchase_amount = sd(car_purchase_amount, na.rm = TRUE))
+```
+
+Calculate the mean.
+```{r}
+dfdata %>% 
+  group_by(net_worth_average) %>% 
+  summarise(mean_car_purchase_amount = mean(car_purchase_amount, na.rm = TRUE))
+```
+
+```{r}
+xnot3 <- 48334
+nnot3 <- 243
+snot3 <- 10175
+x3 <- 40311
+n3 <- 257
+s3 <- 9846
+
+z = 1.96
+
+uci_not <- xnot3 + z*(snot3/sqrt(nnot3))
+lci_not <- xnot3 - z*(snot3/sqrt(nnot3))
+uci_not
+  
+```
+
+```{r}
+lci_not
+```
+
+```{r}
+u_ci <- x3 + z*(s3/sqrt(n3))
+l_ci <- x3 - z*(s3/sqrt(n3))
+
+u_ci
+```
+
+```{r}
+l_ci
+```
+
+With 95% confident that people whose **net_worth** is above average have an average **car_purchase_amount** between 47054.66 and 49613.34. Also, people whose **net_worth** is below average have an average **car_purchase_amount** between 39107.21 and 41514.79 with a 95% confident level. People with higher net worth spend more money purchasing cars.
+
+```{r}
+# Total Paid to a Car vs Net Worth
+dfdata %>%
+  ggplot(aes(x = car_purchase_amount, y = net_worth)) + 
+  geom_point(color='steelBlue') +
+  geom_abline(intercept = 50, slope = 10, linewidth = 1, color='indianred', linetype='dashed') + 
+  labs(
+    x = 'Car Purchase Amount',
+    y = 'Net Worth'
+  )
+```
+
+## Part 5 - Conclusion
+
+The purpose of data analysis is to extract useful information from data, make decisions based on data analysis, and derive insights. Before I start analyzing the data I had to think carefully about why I wanted to analyze the data and what kind of data they needed to analyze. This project's data analysis process was completed with data collection, data cleaning, data analysis, and data visualization. I think age, annual salary, net worth, and car purchase amount are indicators that help predict the purchase price of a car.  However, I don't think credit card debt is a good indicator for predicting prices. This is because there are so many variables and the circumstances of each person's credit card debt are so diverse. Consequently, through this data, I was able to find that middle-aged people with better financial status buy more expensive cars than the younger generation.
+
